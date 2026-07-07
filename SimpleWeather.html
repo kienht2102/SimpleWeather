@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simple Weather Report</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Dùng Tailwind CSS thông qua CDN -->
+  </head>
+  <body
+    class="bg-gradient-to-br from-blue-400 to-indigo-900 min-h-screen flex items-center justify-center p-4"
+  >
+    <div class="w-full max-w-xl flex flex-col items-center">
+      <div class="text-center mb-6 text-white">
+        <h1 class="text-4xl font-extrabold tracking-tight drop-shadow-md mb-2">
+          App xem thời tiết bằng API OpenWeatherMap
+        </h1>
+        <p class="text-white/80 font-medium">
+          Dự báo nhanh chóng, chính xác mọi lúc mọi nơi
+        </p>
+      </div>
+
+      <div
+        class="bg-white/20 backdrop-blur-md text-white rounded-3xl p-8 w-full shadow-2xl border border-white/10"
+      >
+        <form id="search-form" class="flex gap-2 mb-6">
+          <input
+            type="text"
+            id="search-input"
+            placeholder="Nhập tên thành phố (Ví dụ: Hanoi, Tokyo...)"
+            class="flex-1 bg-white/20 border border-white/30 rounded-xl px-4 py-3 text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 transition"
+            required
+          />
+          <button
+            type="submit"
+            class="bg-white text-indigo-900 font-semibold px-6 py-3 rounded-xl hover:bg-white/90 active:scale-95 transition"
+          >
+            Tìm
+          </button>
+        </form>
+
+        <div id="loading-state" class="hidden text-center py-8">
+          <div
+            class="animate-spin inline-block w-8 h-8 border-4 border-current border-t-transparent text-white rounded-full mb-2"
+            role="status"
+          ></div>
+          <p class="text-sm italic text-white/80">
+            Đang tải dữ liệu thời tiết...
+          </p>
+        </div>
+
+        <div
+          id="error-state"
+          class="hidden bg-red-500/30 border border-red-500/50 rounded-xl p-4 text-center mb-4"
+        >
+          <p class="text-sm font-medium text-red-200" id="error-message">
+            Không tìm thấy thành phố này. Vui lòng thử lại!
+          </p>
+        </div>
+
+        <div id="weather-info" class="hidden transition-all duration-500">
+          <div class="text-center mb-6">
+            <h2 id="city-name" class="text-4xl font-bold tracking-wide">
+              Hanoi
+            </h2>
+            <p
+              id="weather-desc"
+              class="text-base uppercase tracking-widest text-white/70 mt-1"
+            >
+              Clear Sky
+            </p>
+          </div>
+
+          <div class="flex items-center justify-center gap-6 mb-8">
+            <img
+              id="weather-icon"
+              src=""
+              alt="Weather Icon"
+              class="w-28 h-28 filter drop-shadow-md"
+            />
+            <h1 class="text-7xl font-black flex">
+              <span id="temperature">--</span>°C
+            </h1>
+          </div>
+
+          <div
+            class="grid grid-cols-2 gap-6 bg-white/10 rounded-2xl p-6 border border-white/5"
+          >
+            <div class="flex items-center gap-4">
+              <div class="p-3 bg-white/20 rounded-xl text-xl">💧</div>
+              <div>
+                <p class="text-xs text-white/60 uppercase tracking-wider">
+                  Độ ẩm
+                </p>
+                <p id="humidity" class="text-2xl font-bold">--%</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-4">
+              <div class="p-3 bg-white/20 rounded-xl text-xl">💨</div>
+              <div>
+                <p class="text-xs text-white/60 uppercase tracking-wider">
+                  Tốc độ gió
+                </p>
+                <p id="wind-speed" class="text-2xl font-bold">-- m/s</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Cấu hình API OpenWeatherMap
+      const API_KEY = "0c973805000feed002175af2a37f7a25";
+      // Lấy API theo hướng dẫn https://openweathermap.org/faq#error401 tại mục "How to get an API key?"
+      const BASE_URL = "https://api.openweathermap.org/data/2.5/weather";
+      // Là endpoint của API thời tiết hiện tại từ OpenWeatherMap (Current Weather Data).
+
+      // DOM Elements
+      const searchForm = document.getElementById("search-form");
+      //   Nút tìm kiếm
+      const searchInput = document.getElementById("search-input");
+      //   Lấy tên thành phố vừa nhập vào input
+      const loadingState = document.getElementById("loading-state");
+      //   Ẩn/hiện màn hình chờ trong lúc đợi API trả về kết quả
+      const errorState = document.getElementById("error-state");
+      //   Ẩn/hiện màn hình báo lỗi khi có sự cố
+      const errorMessage = document.getElementById("error-message");
+      //   Nội dung báo lỗi
+      const weatherInfo = document.getElementById("weather-info");
+      //   Ẩn khi ứng dụng bị lỗi/đang tải và hiện khi có dữ liệu
+
+      const cityNameEl = document.getElementById("city-name");
+      //   Tên thành phố
+      const weatherDescEl = document.getElementById("weather-desc");
+      //   Trạng thái thời tiết
+      const weatherIconEl = document.getElementById("weather-icon");
+      //   Icon thời tiết
+      const temperatureEl = document.getElementById("temperature");
+      //   Nhiệt độ
+      const humidityEl = document.getElementById("humidity");
+      //   Độ ẩm
+      const windSpeedEl = document.getElementById("wind-speed");
+      //   Tốc độ gió
+
+      // ==========================================
+      // 1. CÁC HÀM LOGIC
+      // ==========================================
+
+      /**
+       * Hàm gọi API thời tiết (Async/Await)
+       * @param {string} city - Tên thành phố người dùng nhập vào
+       */
+      const fetchWeatherData = async (city) => {
+        const url = `${BASE_URL}?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric&lang=vi`;
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            throw new Error("Không tìm thấy tên thành phố này!");
+          } else if (response.status === 401) {
+            throw new Error("API Key không hợp lệ. Hãy kiểm tra lại cấu hình.");
+          } else {
+            throw new Error("Đã xảy ra lỗi hệ thống khi gọi API.");
+          }
+        }
+
+        return await response.json();
+      };
+
+      // ==========================================
+      // 2. CÁC HÀM GIAO DIỆN
+      // ==========================================
+
+      const showLoading = () => {
+        // Hàm tạo trạng thái loading, ẩn dữ liệu
+        loadingState.classList.remove("hidden");
+        errorState.classList.add("hidden");
+        weatherInfo.classList.add("hidden");
+      };
+
+      const showError = (message) => {
+        // Hàm hiển thị thông báo lỗi
+        loadingState.classList.add("hidden");
+        weatherInfo.classList.add("hidden");
+
+        errorMessage.textContent = message;
+        errorState.classList.remove("hidden");
+      };
+
+      /**
+       * Xuất dữ liệu thật ra giao diện UI
+       * @param {Object} data - Dữ liệu JSON sạch trả về từ API
+       */
+      const renderWeatherUI = (data) => {
+        loadingState.classList.add("hidden");
+        errorState.classList.add("hidden");
+
+        // Xuất dữ liệu
+        cityNameEl.textContent = `${data.name}, ${data.sys.country}`;
+        weatherDescEl.textContent = data.weather[0].description;
+        temperatureEl.textContent = Math.round(data.main.temp);
+        humidityEl.textContent = `${data.main.humidity}%`;
+        windSpeedEl.textContent = `${data.wind.speed} m/s`;
+
+        // Lấy ảnh Icon thời tiết
+        const iconCode = data.weather[0].icon;
+        weatherIconEl.src = `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
+
+        // Hiển thị khung thông tin thời tiết
+        weatherInfo.classList.remove("hidden");
+      };
+
+      // ==========================================
+      // 3. XỬ LÝ EVENT LISTENER
+      // ==========================================
+
+      searchForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const cityKeyword = searchInput.value.trim().normalize("NFC"); // .normalize("NFC") dùng để đồng bộ gõ tiếng việt
+
+        if (!cityKeyword) return;
+
+        // 1. Chuyển UI sang trạng thái Loading
+        showLoading();
+
+        try {
+          // 2. Chạy hàm xử lý logic (Call API)
+          const weatherData = await fetchWeatherData(cityKeyword);
+
+          // 3. Chạy hàm hiển thị UI khi dữ liệu thành công
+          renderWeatherUI(weatherData);
+        } catch (error) {
+          // In toàn bộ lỗi ra Console
+          console.error("Lỗi chi tiết:", error);
+
+          // Hiển thị lỗi ra màn hình cho người dùng
+          showError(error.message);
+        }
+      });
+    </script>
+  </body>
+</html>
