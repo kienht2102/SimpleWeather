@@ -3,7 +3,7 @@
 ![Tailwind v4](https://img.shields.io/badge/Tailwind_CSS-v4.0-blue?style=flat&logo=tailwind-css)
 ![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-yellow?style=flat&logo=javascript)
 
-Một ứng dụng web một trang (Single Page Application) giúp tra cứu thông tin thời tiết hiện tại của bất kỳ thành phố nào trên thế giới bằng cách kết nối với API của OpenWeatherMap. Giao diện được thiết kế hiện đại theo phong cách Glassmorphism (hiệu ứng kính mờ).
+Một ứng dụng web một trang (Single Page Application) giúp tra cứu thông tin thời tiết hiện tại của bất kỳ thành phố nào trên thế giới bằng cách kết nối với API của OpenWeatherMap. Giao diện được thiết kế hiện đại theo phong cách Glassmorphism (hiệu ứng kính mờ). Tuy nhiên vẫn còn hạn chế về việc tìm kiếm một số nước hoặc thành phố bị trùng với tên một thành phố của quốc gia khác (TP China thuộc Mexico, Tây Ninh (Việt Nam) trùng với Tây Ninh(Trung Quốc), ...), cộng thêm có những nước và thành phố không tìm ra được (do OpenWeatherMap).
 
 ## 📸 Màn hình Demo ứng dụng
 
